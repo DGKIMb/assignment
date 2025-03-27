@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>학생 성적 분석</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .tab-section { margin-top: 30px; }
+        .chart-container { margin-bottom: 40px; }
+        .tab-button {
+            margin: 0 10px;
+            cursor: pointer;
+        }
+        .active-tab {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<h1>학생 성적 분석 대시보드</h1>
+
+<!-- 1. 평균 점수 막대 그래프 -->
+<div class="tab-section chart-container">
+    <h2>학년별 평균 시험 점수</h2>
+    <canvas id="barChart"></canvas>
+</div>
+
+<!-- 2. 학년 탭 -->
+<div style="text-align: center; margin-bottom: 20px;">
+    <button class="tab-button active-tab" onclick="loadStudents(10, 0, this)">10학년</button>
+    <button class="tab-button" onclick="loadStudents(11, 0, this)">11학년</button>
+    <button class="tab-button" onclick="loadStudents(12, 0, this)">12학년</button>
+</div>
+
+<!-- 3. 학생 테이블 -->
+<div style="display: flex; justify-content: center;">
+    <table border="1" cellpadding="8" cellspacing="0" style="min-width: 600px; text-align: center;">
+        <thead style="background-color: #f2f2f2;">
+        <tr>
+            <th>No</th>
+            <th>이름</th>
+            <th>성별</th>
+            <th>학년</th>
+            <th>트랙</th>
+        </tr>
+        </thead>
+        <tbody id="student-tbody"></tbody>
+    </table>
+</div>
+
+<!-- 4. 페이지네이션 -->
+<div id="pagination" style="text-align: center; margin-top: 20px;"></div>
+
+<!-- 5. 스크립트 -->
+<script th:inline="javascript">
+    const averageScores = [[${averageScores}]];
+    const scores = [[${scores}]];
+
+    const grades = ["10", "11", "12"];
+    const tracks = [4, 3, 2, 1];
+
+    // 학년별 평균 점수 차트
+    const labels = grades.map(g => `${g}학년`);
+
+    const barDatasets = tracks.map(track => {
+        return {
+            label: `Track ${track}`,
+            data: grades.map(grade => averageScores[track]?.[grade] ?? null),
+            backgroundColor: 'rgba(180,180,180,0.6)',
+            borderColor: 'rgba(100, 100, 100, 0.6)',
+            borderWidth: 1,
+            type: 'bar'
+        };
+    });
+
+    const parkerLine = {
+        label: 'Parker',
+        data: grades.map(grade => {
+            const s = scores.find(s => s.name === 'Parker' && s.grade == grade);
+            return s ? s.score : null;
+        }),
+        type: 'line',
+        borderColor: 'blue',
+        backgroundColor: 'blue',
+        fill: false,
+        pointRadius: 6,
+        pointBorderWidth: 2,
+        pointBorderColor: 'black'
+    };
+
+    const aliceLine = {
+        label: 'Alice',
+        data: grades.map(grade => {
+            const s = scores.find(s => s.name === 'Alice' && s.grade == grade);
+            return s ? s.score : null;
+        }),
+        type: 'line',
+        borderColor: 'orange',
+        backgroundColor: 'orange',
+        fill: false,
+        pointStyle: 'rectRot',
+        pointRadius: 6,
+        pointBorderWidth: 2,
+        pointBorderColor: 'black'
+    };
+
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [...barDatasets, parkerLine, aliceLine]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '학년별 평균 시험 점수',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.formattedValue ?? "N/A"}점`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: 100,
+                    title: {
+                        display: true,
+                        text: '점수',
+                        font: { size: 14 }
+                    },
+                    grid: {
+                        color: '#e0e0e0'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: '학년',
+                        font: { size: 14 }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    let currentGrade = 10;
+
+    function loadStudents(grade, page = 0, clickedTab = null) {
+        currentGrade = grade;
+
+        // 탭 스타일 업데이트
+        if (clickedTab) {
+            document.querySelectorAll(".tab-button").forEach(btn => btn.classList.remove("active-tab"));
+            clickedTab.classList.add("active-tab");
+        }
+
+        fetch(`/students?grade=${grade}&page=${page}&size=3`)
+            .then(res => res.json())
+            .then(data => {
+                renderStudents(data.content);
+                renderPagination(data.totalPages, data.number, data.first, data.last);
+            })
+            .catch(err => console.error("불러오기 실패:", err));
+    }
+
+    function renderStudents(students) {
+        const tbody = document.getElementById("student-tbody");
+        tbody.innerHTML = "";
+
+        if (students.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">해당 학년에 학생이 없습니다.</td></tr>';
+            return;
+        }
+
+        students.forEach(s => {
+            const row = `<tr>
+                <td>${s.no}</td>
+                <td>${s.name}</td>
+                <td>${s.gender}</td>
+                <td>${s.grade}</td>
+                <td>${s.track}</td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    function renderPagination(totalPages, currentPage, isFirst, isLast) {
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = "";
+
+        if (totalPages <= 1) return;
+
+        if (!isFirst) {
+            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${currentPage - 1}); return false;">이전</a> `;
+        }
+
+        for (let i = 0; i < totalPages; i++) {
+            const style = i === currentPage ? 'style="font-weight:bold; text-decoration:underline;"' : "";
+            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${i}); return false;" ${style}>${i + 1}</a> `;
+        }
+
+        if (!isLast) {
+            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${currentPage + 1}); return false;">다음</a>`;
+        }
+    }
+
+    // 초기 로딩: 10학년
+    window.onload = function () {
+        loadStudents(10, 0, document.querySelector(".tab-button"));
+    }
+</script>
+
+</body>
+</html>
