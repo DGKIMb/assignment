@@ -10,6 +10,7 @@ public class ParkerAndAliceResponse {
     private String name;
     private String grade;
     private int score;
+    private int track;
 
     @Builder
     public ParkerAndAliceResponse(ParkerAndAliceDto dto) {
@@ -17,5 +18,6 @@ public class ParkerAndAliceResponse {
         this.grade = dto.getLecture().toString().equals("3") ? "10" :
                 dto.getLecture().toString().equals("2") ? "11" : "12";
         this.score = dto.getValue().intValue();
+        this.track = dto.getTrack().intValue();
     }
 }

@@ -29,7 +29,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query(value = """
         SELECT st.name AS name,
                sc.lecture AS lecture,
-               sc.value AS value
+               sc.value AS value,
+               st.track AS track
         FROM Student st
         JOIN Score sc ON st.seq = sc.student
         WHERE st.seq = :seq1 OR st.seq = :seq2

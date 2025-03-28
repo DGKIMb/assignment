@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>학생 성적 분석</title>
+    <title>Vinns Academy</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .tab-section { margin-top: 30px; }
@@ -17,41 +17,130 @@
     </style>
 </head>
 <body>
-<h1>학생 성적 분석 대시보드</h1>
+<h1>Vinns Academy</h1>
 
-<!-- 1. 평균 점수 막대 그래프 -->
-<div class="tab-section chart-container">
+<!-- 평균 점수 막대 그래프 -->
+<div class="tab-section chart-container" style="max-width: 650px; margin: 0 auto 40px auto;">
     <h2>학년별 평균 시험 점수</h2>
-    <canvas id="barChart"></canvas>
+    <canvas id="barChart" width="600" height="300"></canvas>
 </div>
 
-<!-- 2. 학년 탭 -->
-<div style="text-align: center; margin-bottom: 20px;">
-    <button class="tab-button active-tab" onclick="loadStudents(10, 0, this)">10학년</button>
-    <button class="tab-button" onclick="loadStudents(11, 0, this)">11학년</button>
-    <button class="tab-button" onclick="loadStudents(12, 0, this)">12학년</button>
+<div class="student-section">
+    <h2 class="student-title">학년별 학생 목록</h2>
+
+    <!-- 학년 탭 -->
+    <div class="tab-container">
+        <button class="tab-button active-tab" onclick="loadStudents(10, 0, this)">10학년</button>
+        <button class="tab-button" onclick="loadStudents(11, 0, this)">11학년</button>
+        <button class="tab-button" onclick="loadStudents(12, 0, this)">12학년</button>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="table-wrapper">
+        <table class="student-table">
+            <thead>
+            <tr>
+                <th>No</th>
+                <th>Name</th>
+                <th>Gender</th>
+                <th>Level</th>
+                <th>Track</th>
+                <th>Lecture / Score</th>
+                <th>Lecture / Score</th>
+            </tr>
+            </thead>
+            <tbody id="student-tbody"></tbody>
+        </table>
+    </div>
+
+    <!-- 페이지네이션 -->
+    <div id="pagination" class="pagination-container"></div>
 </div>
 
-<!-- 3. 학생 테이블 -->
-<div style="display: flex; justify-content: center;">
-    <table border="1" cellpadding="8" cellspacing="0" style="min-width: 600px; text-align: center;">
-        <thead style="background-color: #f2f2f2;">
-        <tr>
-            <th>No</th>
-            <th>이름</th>
-            <th>성별</th>
-            <th>학년</th>
-            <th>트랙</th>
-        </tr>
-        </thead>
-        <tbody id="student-tbody"></tbody>
-    </table>
-</div>
+<style>
+    .student-section {
+        max-width: 800px;
+        margin: 0 auto;
+    }
 
-<!-- 4. 페이지네이션 -->
-<div id="pagination" style="text-align: center; margin-top: 20px;"></div>
+    .student-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-align: left;
+    }
 
-<!-- 5. 스크립트 -->
+    .tab-container {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .tab-button {
+        padding: 10px 20px;
+        background-color: #f2f2f2;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        border-radius: 12px 12px 0 0;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .tab-button:hover {
+        background-color: #e0e0e0;
+    }
+
+    .active-tab {
+        background-color: white;
+        font-weight: bold;
+        border: 2px solid #888;
+        border-bottom: 2px solid white;
+        z-index: 1;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .student-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .student-table th, .student-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+    }
+
+    .student-table thead {
+        background-color: #f9f9f9;
+        font-weight: bold;
+    }
+
+    .pagination-container {
+        margin-top: 20px;
+        font-size: 16px;
+        text-align: center;
+    }
+
+    .pagination-container a {
+        margin: 0 6px;
+        text-decoration: none;
+        color: #333;
+    }
+
+    .pagination-container a:hover {
+        text-decoration: underline;
+    }
+
+    .pagination-container a[style*="font-weight:bold"] {
+        color: #007bff;
+    }
+</style>
+
 <script th:inline="javascript">
     const averageScores = [[${averageScores}]];
     const scores = [[${scores}]];
@@ -59,15 +148,33 @@
     const grades = ["10", "11", "12"];
     const tracks = [4, 3, 2, 1];
 
-    // 학년별 평균 점수 차트
     const labels = grades.map(g => `${g}학년`);
+    const trackOrder = [4, 3, 2, 1];
 
-    const barDatasets = tracks.map(track => {
+    function getBarIndex(track) {
+        return trackOrder.indexOf(track);
+    }
+
+    const barColorShades = [
+        'rgba(220,220,220,0.6)',
+        'rgba(200,200,200,0.6)',
+        'rgba(170,170,170,0.6)',
+        'rgba(140,140,140,0.6)'
+    ];
+
+    const barBorderShades = [
+        'rgba(160,160,160,0.6)',
+        'rgba(140,140,140,0.6)',
+        'rgba(110,110,110,0.6)',
+        'rgba(90,90,90,0.6)'
+    ];
+
+    const barDatasets = tracks.map((track, idx) => {
         return {
             label: `Track ${track}`,
             data: grades.map(grade => averageScores[track]?.[grade] ?? null),
-            backgroundColor: 'rgba(180,180,180,0.6)',
-            borderColor: 'rgba(100, 100, 100, 0.6)',
+            backgroundColor: barColorShades[idx],
+            borderColor: barBorderShades[idx],
             borderWidth: 1,
             type: 'bar'
         };
@@ -77,8 +184,10 @@
         label: 'Parker',
         data: grades.map(grade => {
             const s = scores.find(s => s.name === 'Parker' && s.grade == grade);
-            return s ? s.score : null;
+            if (!s) return null;
+            return { x: `${grade}학년`, y: s.score, track: s.track };
         }),
+        parsing: false,
         type: 'line',
         borderColor: 'blue',
         backgroundColor: 'blue',
@@ -92,8 +201,10 @@
         label: 'Alice',
         data: grades.map(grade => {
             const s = scores.find(s => s.name === 'Alice' && s.grade == grade);
-            return s ? s.score : null;
+            if (!s) return null;
+            return { x: `${grade}학년`, y: s.score, track: s.track };
         }),
+        parsing: false,
         type: 'line',
         borderColor: 'orange',
         backgroundColor: 'orange',
@@ -102,6 +213,28 @@
         pointRadius: 6,
         pointBorderWidth: 2,
         pointBorderColor: 'black'
+    };
+
+    const adjustLinePointsPlugin = {
+        id: 'adjustLinePointsPlugin',
+        beforeDatasetsDraw(chart, args, pluginOptions) {
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                if (dataset.type !== 'line') return;
+
+                const meta = chart.getDatasetMeta(datasetIndex);
+                meta.data.forEach((point, index) => {
+                    const data = dataset.data[index];
+                    if (!data || !data.track) return;
+
+                    const barIndex = chart.data.datasets.findIndex(d => d.label === `Track ${data.track}`);
+                    const barMeta = chart.getDatasetMeta(barIndex);
+                    const bar = barMeta.data[index];
+                    if (bar) {
+                        point.x = bar.x;
+                    }
+                });
+            });
+        }
     };
 
     new Chart(document.getElementById('barChart'), {
@@ -154,7 +287,8 @@
                     }
                 }
             }
-        }
+        },
+        plugins: [adjustLinePointsPlugin]
     });
 
     let currentGrade = 10;
@@ -162,7 +296,6 @@
     function loadStudents(grade, page = 0, clickedTab = null) {
         currentGrade = grade;
 
-        // 탭 스타일 업데이트
         if (clickedTab) {
             document.querySelectorAll(".tab-button").forEach(btn => btn.classList.remove("active-tab"));
             clickedTab.classList.add("active-tab");
@@ -193,6 +326,8 @@
                 <td>${s.gender}</td>
                 <td>${s.grade}</td>
                 <td>${s.track}</td>
+                <td>_ / _</td>
+                <td>_ / _</td>
             </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
         });
@@ -218,11 +353,11 @@
         }
     }
 
-    // 초기 로딩: 10학년
     window.onload = function () {
         loadStudents(10, 0, document.querySelector(".tab-button"));
     }
 </script>
+
 
 </body>
 </html>

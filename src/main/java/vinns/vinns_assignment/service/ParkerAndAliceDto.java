@@ -4,4 +4,5 @@ public interface ParkerAndAliceDto {
     String getName();
     Long getLecture();
     Long getValue();
+    Long getTrack();
 }
