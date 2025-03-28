@@ -340,7 +340,7 @@
         if (totalPages <= 1) return;
 
         if (!isFirst) {
-            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${currentPage - 1}); return false;">이전</a> `;
+            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${currentPage - 1}); return false;">◀</a> `;
         }
 
         for (let i = 0; i < totalPages; i++) {
@@ -349,7 +349,7 @@
         }
 
         if (!isLast) {
-            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${currentPage + 1}); return false;">다음</a>`;
+            pagination.innerHTML += `<a href="#" onclick="loadStudents(${currentGrade}, ${currentPage + 1}); return false;">▶</a>`;
         }
     }
 
